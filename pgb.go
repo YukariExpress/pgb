@@ -19,6 +19,50 @@ var (
 	token      string
 )
 
+func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
+
+	var b bytes.Buffer
+
+	binary.Write(
+		&b,
+		binary.LittleEndian,
+		q.From.ID,
+	)
+
+	binary.Write(
+		&b,
+		binary.LittleEndian,
+		q.Query,
+	)
+
+	chksum := sha256.Sum256(b.Bytes())
+
+	id := hex.EncodeToString(chksum[:])
+
+	res := []tgbotapi.InlineQueryResultArticle{
+		tgbotapi.InlineQueryResultArticle{
+			ID:   id,
+			Type: "article",
+			InputMessageContent: tgbotapi.InputTextMessageContent{
+				Text:      "大凶",
+				ParseMode: "HTML",
+			},
+			Title: "求签",
+		},
+	}
+
+	var resIterfaces []interface{} = make([]interface{}, len(res))
+	for i, d := range res {
+		resIterfaces[i] = d
+	}
+
+	ans := tgbotapi.InlineConfig{
+		InlineQueryID: q.ID,
+		Results:       resIterfaces,
+	}
+	return ans
+}
+
 func main() {
 	flag.StringVar(
 		&host,
@@ -68,45 +112,7 @@ func main() {
 	for update := range updates {
 		if update.InlineQuery != nil {
 
-			var b bytes.Buffer
-
-			binary.Write(
-				&b,
-				binary.LittleEndian,
-				update.InlineQuery.From.ID,
-			)
-
-			binary.Write(
-				&b,
-				binary.LittleEndian,
-				update.InlineQuery.Query,
-			)
-
-			chksum := sha256.Sum256(b.Bytes())
-
-			id := hex.EncodeToString(chksum[:])
-
-			res := []tgbotapi.InlineQueryResultArticle{
-				tgbotapi.InlineQueryResultArticle{
-					ID:   id,
-					Type: "article",
-					InputMessageContent: tgbotapi.InputTextMessageContent{
-						Text:      "大凶",
-						ParseMode: "HTML",
-					},
-					Title: "求签",
-				},
-			}
-
-			var resIterfaces []interface{} = make([]interface{}, len(res))
-			for i, d := range res {
-				resIterfaces[i] = d
-			}
-
-			ans := tgbotapi.InlineConfig{
-				InlineQueryID: update.InlineQuery.ID,
-				Results:       resIterfaces,
-			}
+			ans := answerInline(update.InlineQuery)
 
 			resp, err := bot.AnswerInlineQuery(ans)
 
