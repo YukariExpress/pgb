@@ -51,26 +51,17 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 
 	id := hex.EncodeToString(chksum[:])
 
-	res := []tgbotapi.InlineQueryResultArticle{
-		tgbotapi.InlineQueryResultArticle{
-			ID:   id,
-			Type: "article",
-			InputMessageContent: tgbotapi.InputTextMessageContent{
-				Text:      "大凶",
-				ParseMode: "HTML",
-			},
-			Title: "求签",
-		},
-	}
+	var res []interface{} = make([]interface{}, 1)
 
-	var resIterfaces []interface{} = make([]interface{}, len(res))
-	for i, d := range res {
-		resIterfaces[i] = d
-	}
+	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
+		id,
+		"求签",
+		"大凶",
+	)
 
 	ans := tgbotapi.InlineConfig{
 		InlineQueryID: q.ID,
-		Results:       resIterfaces,
+		Results:       res,
 	}
 	return ans
 }
