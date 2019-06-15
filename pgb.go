@@ -74,10 +74,13 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		uint64(q.From.ID),
 	)
 
+	t := time.Now().Truncate(30 * time.Minute).Unix()
+	rand.Seed(t)
+
 	binary.Write(
 		&b,
 		binary.LittleEndian,
-		time.Now().Unix(),
+		t,
 	)
 
 	binary.Write(
