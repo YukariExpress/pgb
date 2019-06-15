@@ -20,6 +20,50 @@ var (
 	token      string
 )
 
+func divine(input []byte) string {
+	var sum int
+
+	// modulo is distributive
+	// n_1 + n_2 + ... + n_i mod k
+	//     = (n_1 mod k + n_2 mod k + ... + n_i mod k) mod k
+	//
+	// Should work as long as there are less than 2^(63 - 8) elements in a
+	// slice.
+	for _, v := range input {
+		sum += int(v)
+		sum %= 256
+	}
+
+	var res string
+
+	// Binomial coefficient choose(8, 0:8)
+	// TODO internationalization
+	switch {
+	case 254 < sum:
+		res = "超大吉"
+	case 247 < sum && sum <= 247:
+		res = "大吉"
+	case 219 < sum && sum <= 247:
+		res = "吉"
+	case 163 < sum && sum <= 219:
+		res = "小吉"
+	case 93 < sum && sum <= 163:
+		res = "尚可"
+	case 37 < sum && sum <= 93:
+		res = "小凶"
+	case 9 < sum && sum <= 37:
+		res = "凶"
+	case 2 < sum && sum <= 9:
+		res = "大凶"
+	case sum <= 2:
+		res = "超大凶"
+	default:
+		res = "???"
+	}
+
+	return res
+}
+
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	var b bytes.Buffer
 
@@ -56,7 +100,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
 		id,
 		"求签",
-		"大凶",
+		divine(chksum[:]),
 	)
 
 	ans := tgbotapi.InlineConfig{
