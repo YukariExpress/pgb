@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"time"
@@ -20,13 +21,24 @@ var (
 )
 
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
-
 	var b bytes.Buffer
 
 	binary.Write(
 		&b,
 		binary.LittleEndian,
-		q.From.ID,
+		uint64(q.From.ID),
+	)
+
+	binary.Write(
+		&b,
+		binary.LittleEndian,
+		time.Now().Unix(),
+	)
+
+	binary.Write(
+		&b,
+		binary.LittleEndian,
+		rand.Uint64(),
 	)
 
 	binary.Write(
