@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -100,7 +101,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
 		id,
 		"求签",
-		divine(chksum[:]),
+		fmt.Sprintf("所求事项: %s\n结果: %s\n", q.Query, divine(chksum[:])),
 	)
 
 	ans := tgbotapi.InlineConfig{
