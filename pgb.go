@@ -101,9 +101,8 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		log.Println(err)
 	}
 
-	chksum := h.Sum(nil)
+	r := bytes.NewReader(h.Sum(nil))
 
-	r := bytes.NewReader(chksum)
 	// sha256 checksum is 256 bits long.
 	seeds := [4]uint64{0, 0, 0, 0}
 
@@ -111,15 +110,24 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		fmt.Println("binary.Read failed:", err)
 	}
 
-	var res []interface{} = make([]interface{}, 1)
+	var res []interface{} = make([]interface{}, 2)
 
-	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
-		hex.EncodeToString(chksum),
+	res[0] = tgbotapi.NewInlineQueryResultArticleMarkdown(
+		hex.EncodeToString([]byte("divine")),
 		"求签",
 		fmt.Sprintf(
 			"所求事项: %s\n结果: %s\n",
 			q.Query,
 			divine(seeds),
+		),
+	)
+
+	res[1] = tgbotapi.NewInlineQueryResultArticleMarkdown(
+		hex.EncodeToString([]byte("pia")),
+		"Pia",
+		fmt.Sprintf(
+			"Pia!<(=ｏ ‵-′)ノ☆ %s",
+			q.Query,
 		),
 	)
 
