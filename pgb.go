@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -14,12 +13,14 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/kelseyhightower/envconfig"
 )
 
-var (
-	host, port string
-	token      string
-)
+type Config struct {
+	Host  string `default:"127.0.0.1"`
+	Port  string `default:"8080"`
+	Token string `require:"true"`
+}
 
 func divine(input []byte) string {
 	var sum int
@@ -115,33 +116,11 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 }
 
 func main() {
-	flag.StringVar(
-		&host,
-		"h",
-		"127.0.0.1",
-		"IP address of the bot to bind to, default to 127.0.0.1.",
-	)
+	var conf Config
 
-	flag.StringVar(
-		&port,
-		"p",
-		"8080",
-		"port of the bot, default to 8080",
-	)
+	envconfig.MustProcess("", &conf)
 
-	flag.StringVar(
-		&token,
-		"t",
-		"",
-		"bot token",
-	)
-	flag.Parse()
-
-	if token == "" {
-		log.Fatalln("No token set.")
-	}
-
-	bot, err := tgbotapi.NewBotAPI(token)
+	bot, err := tgbotapi.NewBotAPI(conf.Token)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,7 +137,7 @@ func main() {
 
 	updates := bot.ListenForWebhook("/")
 
-	go http.ListenAndServe(net.JoinHostPort(host, port), nil)
+	go http.ListenAndServe(net.JoinHostPort(conf.Host, conf.Port), nil)
 
 	for update := range updates {
 		if update.InlineQuery != nil {
