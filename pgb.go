@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
@@ -126,7 +125,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	var res []interface{} = make([]interface{}, 2)
 
 	res[0] = tgbotapi.NewInlineQueryResultArticleMarkdown(
-		hex.EncodeToString([]byte("divine")),
+		"divine",
 		"求签",
 		fmt.Sprintf(
 			"所求事项: %s\n结果: %s\n",
@@ -136,7 +135,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	)
 
 	res[1] = tgbotapi.NewInlineQueryResultArticleMarkdown(
-		hex.EncodeToString([]byte("pia")),
+		"pia",
 		"Pia",
 		fmt.Sprintf(
 			"%s %s",
