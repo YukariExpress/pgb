@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
+	"hash/crc64"
 	"log"
 	"math/rand"
 	"net"
@@ -17,95 +15,96 @@ import (
 )
 
 type Config struct {
-	Host  string `default:"127.0.0.1"`
+	Host  string `default:"0.0.0.0"`
 	Port  string `default:"8080"`
 	Token string `require:"true"`
 }
 
-func divine(input []byte) string {
-	var sum int
+func divine(in int64) string {
 
-	// modulo is distributive
-	// n_1 + n_2 + ... + n_i mod k
-	//     = (n_1 mod k + n_2 mod k + ... + n_i mod k) mod k
-	//
-	// Should work as long as there are less than 2^(63 - 8) elements in a
-	// slice.
-	for _, v := range input {
-		sum += int(v)
-		sum %= 256
-	}
+	r := rand.New(rand.NewSource(in))
 
-	var res string
+	var omen, mult string
 
-	// Binomial coefficient choose(8, 0:8)
-	// TODO internationalization
+	m := r.Uint64() % 1024
+
 	switch {
-	case 254 < sum:
-		res = "超大吉"
-	case 247 < sum && sum <= 247:
-		res = "大吉"
-	case 219 < sum && sum <= 247:
-		res = "吉"
-	case 163 < sum && sum <= 219:
-		res = "小吉"
-	case 93 < sum && sum <= 163:
-		res = "尚可"
-	case 37 < sum && sum <= 93:
-		res = "小凶"
-	case 9 < sum && sum <= 37:
-		res = "凶"
-	case 2 < sum && sum <= 9:
-		res = "大凶"
-	case sum <= 2:
-		res = "超大凶"
-	default:
-		res = "???"
+	case m < 1:
+		mult = "极小"
+	case 1 <= m && m < 11:
+		mult = "超小"
+	case 11 <= m && m < 56:
+		mult = "特小"
+	case 56 <= m && m < 176:
+		mult = "甚小"
+	case 176 <= m && m < 386:
+		mult = "小"
+	case 386 <= m && m < 638:
+		mult = ""
+	case 638 <= m && m < 848:
+		mult = "大"
+	case 848 <= m && m < 968:
+		mult = "甚大"
+	case 968 <= m && m < 1013:
+		mult = "特大"
+	case 1013 <= m && m < 1023:
+		mult = "超大"
+	case 1023 <= m:
+		mult = "极大"
 	}
 
-	return res
+	switch r.Uint64() % 16 {
+	case 10, 11, 12, 13, 14, 15:
+		omen = "吉"
+	case 0, 1, 2, 3, 4, 5, 6:
+		omen = "凶"
+	}
+
+	if omen == "" {
+		return "尚可"
+	}
+	return mult + omen
 }
 
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
-	var b bytes.Buffer
+	h := crc64.New(crc64.MakeTable(crc64.ISO))
 
-	binary.Write(
-		&b,
+	if err := binary.Write(
+		h,
 		binary.LittleEndian,
 		uint64(q.From.ID),
-	)
+	); err != nil {
+		log.Println(err)
+	}
 
-	t := time.Now().Truncate(30 * time.Minute).Unix()
-	rand.Seed(t)
-
-	binary.Write(
-		&b,
+	if err := binary.Write(
+		h,
 		binary.LittleEndian,
-		t,
-	)
+		time.Now().Truncate(30*time.Minute).Unix(),
+	); err != nil {
+		log.Println(err)
+	}
 
-	binary.Write(
-		&b,
+	if err := binary.Write(
+		h,
 		binary.LittleEndian,
-		rand.Uint64(),
-	)
+		[]byte(q.Query),
+	); err != nil {
+		log.Println(err)
+	}
 
-	binary.Write(
-		&b,
-		binary.LittleEndian,
-		q.Query,
-	)
-
-	chksum := sha256.Sum256(b.Bytes())
-
-	id := hex.EncodeToString(chksum[:])
+	chksum := h.Sum64()
 
 	var res []interface{} = make([]interface{}, 1)
 
 	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
-		id,
+		fmt.Sprintf("%x", chksum),
 		"求签",
-		fmt.Sprintf("所求事项: %s\n结果: %s\n", q.Query, divine(chksum[:])),
+		fmt.Sprintf(
+			"所求事项: %s\n结果: %s\n",
+			q.Query,
+			divine(int64(chksum)),
+		),
 	)
 
 	ans := tgbotapi.InlineConfig{
