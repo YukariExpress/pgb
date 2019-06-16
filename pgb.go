@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"hash/crc64"
 	"log"
 	"math/rand"
 	"net"
@@ -20,11 +22,27 @@ type Config struct {
 	Token string `require:"true"`
 }
 
-func divine(in int64) string {
-
-	r := rand.New(rand.NewSource(in))
-
+func divine(seeds [4]uint64) string {
 	var omen, mult string
+
+	var s uint64
+
+	for _, v := range seeds {
+		s ^= v
+	}
+
+	r := rand.New(rand.NewSource(int64(s)))
+
+	switch r.Uint64() % 16 {
+	case 10, 11, 12, 13, 14, 15:
+		omen = "吉"
+	case 0, 1, 2, 3, 4, 5, 6:
+		omen = "凶"
+	}
+
+	if omen == "" {
+		return "尚可"
+	}
 
 	m := r.Uint64() % 1024
 
@@ -53,21 +71,11 @@ func divine(in int64) string {
 		mult = "极大"
 	}
 
-	switch r.Uint64() % 16 {
-	case 10, 11, 12, 13, 14, 15:
-		omen = "吉"
-	case 0, 1, 2, 3, 4, 5, 6:
-		omen = "凶"
-	}
-
-	if omen == "" {
-		return "尚可"
-	}
 	return mult + omen
 }
 
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
-	h := crc64.New(crc64.MakeTable(crc64.ISO))
+	h := sha256.New()
 
 	if err := binary.Write(
 		h,
@@ -93,17 +101,25 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		log.Println(err)
 	}
 
-	chksum := h.Sum64()
+	chksum := h.Sum(nil)
+
+	r := bytes.NewReader(chksum)
+	// sha256 checksum is 256 bits long.
+	seeds := [4]uint64{0, 0, 0, 0}
+
+	if err := binary.Read(r, binary.BigEndian, &seeds); err != nil {
+		fmt.Println("binary.Read failed:", err)
+	}
 
 	var res []interface{} = make([]interface{}, 1)
 
 	res[0] = tgbotapi.NewInlineQueryResultArticleHTML(
-		fmt.Sprintf("%x", chksum),
+		hex.EncodeToString(chksum),
 		"求签",
 		fmt.Sprintf(
 			"所求事项: %s\n结果: %s\n",
 			q.Query,
-			divine(int64(chksum)),
+			divine(seeds),
 		),
 	)
 
