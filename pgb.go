@@ -22,16 +22,27 @@ type Config struct {
 	Token string `require:"true"`
 }
 
-func divine(seeds [4]uint64) string {
-	var omen, mult string
-
+func newRand(seeds []uint64) *rand.Rand {
 	var s uint64
 
 	for _, v := range seeds {
 		s ^= v
 	}
 
-	r := rand.New(rand.NewSource(int64(s)))
+	return rand.New(rand.NewSource(int64(s)))
+}
+
+func pia(r *rand.Rand) string {
+	switch r.Uint64() % 8 {
+	case 0:
+		return "Pia!▼(ｏ ‵-′)ノ★"
+	default:
+		return "Pia!<(=ｏ ‵-′)ノ☆"
+	}
+}
+
+func divine(r *rand.Rand) string {
+	var omen, mult string
 
 	switch r.Uint64() % 16 {
 	case 10, 11, 12, 13, 14, 15:
@@ -103,12 +114,14 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 
 	r := bytes.NewReader(h.Sum(nil))
 
-	// sha256 checksum is 256 bits long.
-	seeds := [4]uint64{0, 0, 0, 0}
+	// sha256 checksum is 256 bits long, equals to four 64bits integer.
+	seeds := make([]uint64, 4)
 
 	if err := binary.Read(r, binary.BigEndian, &seeds); err != nil {
 		fmt.Println("binary.Read failed:", err)
 	}
+
+	ra := newRand(seeds)
 
 	var res []interface{} = make([]interface{}, 2)
 
@@ -118,7 +131,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		fmt.Sprintf(
 			"所求事项: %s\n结果: %s\n",
 			q.Query,
-			divine(seeds),
+			divine(ra),
 		),
 	)
 
@@ -126,7 +139,8 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		hex.EncodeToString([]byte("pia")),
 		"Pia",
 		fmt.Sprintf(
-			"Pia!<(=ｏ ‵-′)ノ☆ %s",
+			"%s %s",
+			pia(ra),
 			q.Query,
 		),
 	)
