@@ -43,10 +43,11 @@ func pia(r *rand.Rand) string {
 func divine(r *rand.Rand) string {
 	var omen, mult string
 
-	switch r.Uint64() % 16 {
-	case 10, 11, 12, 13, 14, 15:
+	o := r.Uint64() % 16
+	switch {
+	case 9 <= o:
 		omen = "吉"
-	case 0, 1, 2, 3, 4, 5, 6:
+	case o < 7:
 		omen = "凶"
 	}
 
