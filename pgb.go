@@ -21,6 +21,11 @@ type Config struct {
 	Token string `require:"true"`
 }
 
+type Context struct {
+	Rand  *rand.Rand
+	Query *tgbotapi.InlineQuery
+}
+
 func newRand(seeds []uint64) *rand.Rand {
 	var s uint64
 
@@ -31,19 +36,30 @@ func newRand(seeds []uint64) *rand.Rand {
 	return rand.New(rand.NewSource(int64(s)))
 }
 
-func pia(r *rand.Rand) string {
-	switch r.Uint64() % 8 {
+func pia(ctx *Context) string {
+
+	var pia string
+
+	switch ctx.Rand.Uint64() % 8 {
 	case 0:
-		return "Pia!▼(ｏ ‵-′)ノ★"
+		pia = "Pia!▼(ｏ ‵-′)ノ★"
 	default:
-		return "Pia!<(=ｏ ‵-′)ノ☆"
+		pia = "Pia!<(=ｏ ‵-′)ノ☆"
 	}
+
+	return fmt.Sprintf(
+		"%s %s",
+		pia,
+		ctx.Query.Query,
+	)
+
 }
 
-func divine(r *rand.Rand) string {
-	var omen, mult string
+func divine(ctx *Context) string {
+	var omen, mult, sign string
 
-	o := r.Uint64() % 16
+	o := ctx.Rand.Uint64() % 16
+
 	switch {
 	case 9 <= o:
 		omen = "吉"
@@ -52,37 +68,44 @@ func divine(r *rand.Rand) string {
 	}
 
 	if omen == "" {
-		return "尚可"
+		sign = "尚可"
+	} else {
+
+		m := ctx.Rand.Uint64() % 1024
+
+		switch {
+		case m < 1:
+			mult = "极小"
+		case 1 <= m && m < 11:
+			mult = "超小"
+		case 11 <= m && m < 56:
+			mult = "特小"
+		case 56 <= m && m < 176:
+			mult = "甚小"
+		case 176 <= m && m < 386:
+			mult = "小"
+		case 386 <= m && m < 638:
+			mult = ""
+		case 638 <= m && m < 848:
+			mult = "大"
+		case 848 <= m && m < 968:
+			mult = "甚大"
+		case 968 <= m && m < 1013:
+			mult = "特大"
+		case 1013 <= m && m < 1023:
+			mult = "超大"
+		case 1023 <= m:
+			mult = "极大"
+		}
+
+		sign = mult + omen
 	}
 
-	m := r.Uint64() % 1024
-
-	switch {
-	case m < 1:
-		mult = "极小"
-	case 1 <= m && m < 11:
-		mult = "超小"
-	case 11 <= m && m < 56:
-		mult = "特小"
-	case 56 <= m && m < 176:
-		mult = "甚小"
-	case 176 <= m && m < 386:
-		mult = "小"
-	case 386 <= m && m < 638:
-		mult = ""
-	case 638 <= m && m < 848:
-		mult = "大"
-	case 848 <= m && m < 968:
-		mult = "甚大"
-	case 968 <= m && m < 1013:
-		mult = "特大"
-	case 1013 <= m && m < 1023:
-		mult = "超大"
-	case 1023 <= m:
-		mult = "极大"
-	}
-
-	return mult + omen
+	return fmt.Sprintf(
+		"所求事项: %s\n结果: %s\n",
+		ctx.Query.Query,
+		sign,
+	)
 }
 
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
@@ -121,28 +144,23 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		fmt.Println("binary.Read failed:", err)
 	}
 
-	ra := newRand(seeds)
+	ctx := Context{
+		Rand:  newRand(seeds),
+		Query: q,
+	}
 
 	var res []interface{} = make([]interface{}, 2)
 
 	res[0] = tgbotapi.NewInlineQueryResultArticleMarkdown(
 		"divine",
 		"求签",
-		fmt.Sprintf(
-			"所求事项: %s\n结果: %s\n",
-			q.Query,
-			divine(ra),
-		),
+		divine(&ctx),
 	)
 
 	res[1] = tgbotapi.NewInlineQueryResultArticleMarkdown(
 		"pia",
 		"Pia",
-		fmt.Sprintf(
-			"%s %s",
-			pia(ra),
-			q.Query,
-		),
+		pia(&ctx),
 	)
 
 	ans := tgbotapi.InlineConfig{
