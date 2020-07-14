@@ -108,6 +108,44 @@ func divine(ctx *Context) string {
 	)
 }
 
+func sudoDevine(ctx *Context) string {
+	var mult, result string
+
+	o := ctx.Rand.Uint64() % 16
+
+	if o < 15 {
+		result = fmt.Sprintf(
+			"%s is not in the sudoers file.  This incident will be reported",
+			ctx.Query.From.String(),
+		)
+	} else {
+		m := ctx.Rand.Uint64() % 128
+
+		switch {
+		case m < 1:
+			mult = "极大"
+		case 1 <= m && m < 3:
+			mult = "超大"
+		case 3 <= m && m < 7:
+			mult = "特大"
+		case 7 <= m && m < 15:
+			mult = "甚大"
+		case 15 <= m && m < 31:
+			mult = "大"
+		case 63 <= m:
+			mult = ""
+		}
+
+		result = mult + "吉"
+	}
+
+	return fmt.Sprintf(
+		"所求事项: sudo %s\n结果: %s\n",
+		ctx.Query.Query,
+		result,
+	)
+}
+
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	h := sha256.New()
 
@@ -149,7 +187,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		Query: q,
 	}
 
-	var res []interface{} = make([]interface{}, 2)
+	var res []interface{} = make([]interface{}, 3)
 
 	res[0] = tgbotapi.NewInlineQueryResultArticleMarkdown(
 		"divine",
@@ -158,6 +196,12 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	)
 
 	res[1] = tgbotapi.NewInlineQueryResultArticleMarkdown(
+		"sudo divine",
+		"sudo 求签",
+		sudoDevine(&ctx),
+	)
+
+	res[2] = tgbotapi.NewInlineQueryResultArticleMarkdown(
 		"pia",
 		"Pia",
 		pia(&ctx),
