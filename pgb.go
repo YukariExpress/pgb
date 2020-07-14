@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -26,6 +27,16 @@ type Context struct {
 	Query *tgbotapi.InlineQuery
 }
 
+type builder struct {
+	strings.Builder
+}
+
+func (b *builder) WriteStrings(strs ...string) {
+	for _, s := range strs {
+		b.WriteString(s)
+	}
+}
+
 func newRand(seeds []uint64) *rand.Rand {
 	var s uint64
 
@@ -37,26 +48,25 @@ func newRand(seeds []uint64) *rand.Rand {
 }
 
 func pia(ctx *Context) string {
-
-	var pia string
+	var b builder
 
 	switch ctx.Rand.Uint64() % 8 {
 	case 0:
-		pia = "Pia!▼(ｏ ‵-′)ノ★"
+		b.WriteString("Pia!▼(ｏ ‵-′)ノ★ ")
 	default:
-		pia = "Pia!<(=ｏ ‵-′)ノ☆"
+		b.WriteString("Pia!<(=ｏ ‵-′)ノ☆ ")
 	}
 
-	return fmt.Sprintf(
-		"%s %s",
-		pia,
-		ctx.Query.Query,
-	)
+	b.WriteString(ctx.Query.Query)
 
+	return b.String()
 }
 
 func divine(ctx *Context) string {
-	var omen, mult, sign string
+	var omen, mult string
+	var b builder
+
+	b.WriteStrings("所求事项: ", ctx.Query.Query, "\n结果: ")
 
 	o := ctx.Rand.Uint64() % 16
 
@@ -68,7 +78,7 @@ func divine(ctx *Context) string {
 	}
 
 	if omen == "" {
-		sign = "尚可"
+		b.WriteString("尚可")
 	} else {
 
 		m := ctx.Rand.Uint64() % 1024
@@ -98,25 +108,25 @@ func divine(ctx *Context) string {
 			mult = "极大"
 		}
 
-		sign = mult + omen
+		b.WriteStrings(mult, omen)
 	}
 
-	return fmt.Sprintf(
-		"所求事项: %s\n结果: %s\n",
-		ctx.Query.Query,
-		sign,
-	)
+	return b.String()
 }
 
 func sudoDevine(ctx *Context) string {
-	var mult, result string
+	var mult string
+
+	var b builder
+
+	b.WriteStrings("所求事项: sudo ", ctx.Query.Query, "\n结果: ")
 
 	o := ctx.Rand.Uint64() % 16
 
 	if o < 15 {
-		result = fmt.Sprintf(
-			"%s is not in the sudoers file.  This incident will be reported",
+		b.WriteStrings(
 			ctx.Query.From.String(),
+			" is not in the sudoers file.  This incident will be reported",
 		)
 	} else {
 		m := ctx.Rand.Uint64() % 128
@@ -136,14 +146,10 @@ func sudoDevine(ctx *Context) string {
 			mult = ""
 		}
 
-		result = mult + "吉"
+		b.WriteStrings(mult, "吉")
 	}
 
-	return fmt.Sprintf(
-		"所求事项: sudo %s\n结果: %s\n",
-		ctx.Query.Query,
-		result,
-	)
+	return b.String()
 }
 
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
@@ -187,24 +193,24 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		Query: q,
 	}
 
-	var res []interface{} = make([]interface{}, 3)
+	var res []interface{}
 
-	res[0] = tgbotapi.NewInlineQueryResultArticleMarkdown(
-		"divine",
-		"求签",
-		divine(&ctx),
-	)
-
-	res[1] = tgbotapi.NewInlineQueryResultArticleMarkdown(
-		"sudo divine",
-		"sudo 求签",
-		sudoDevine(&ctx),
-	)
-
-	res[2] = tgbotapi.NewInlineQueryResultArticleMarkdown(
-		"pia",
-		"Pia",
-		pia(&ctx),
+	res = append(res,
+		tgbotapi.NewInlineQueryResultArticleMarkdown(
+			"divine",
+			"求签",
+			divine(&ctx),
+		),
+		tgbotapi.NewInlineQueryResultArticleMarkdown(
+			"sudodivine",
+			"sudo 求签",
+			sudoDevine(&ctx),
+		),
+		tgbotapi.NewInlineQueryResultArticleMarkdown(
+			"pia",
+			"Pia",
+			pia(&ctx),
+		),
 	)
 
 	ans := tgbotapi.InlineConfig{
