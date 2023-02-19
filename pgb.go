@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -114,44 +114,6 @@ func divine(ctx *Context) string {
 	return b.String()
 }
 
-func sudoDevine(ctx *Context) string {
-	var mult string
-
-	var b builder
-
-	b.WriteStrings("所求事项: sudo ", ctx.Query.Query, "\n结果: ")
-
-	o := ctx.Rand.Uint64() % 16
-
-	if o < 15 {
-		b.WriteStrings(
-			ctx.Query.From.String(),
-			" is not in the sudoers file.  This incident will be reported",
-		)
-	} else {
-		m := ctx.Rand.Uint64() % 128
-
-		switch {
-		case m < 1:
-			mult = "极大"
-		case 1 <= m && m < 3:
-			mult = "超大"
-		case 3 <= m && m < 7:
-			mult = "特大"
-		case 7 <= m && m < 15:
-			mult = "甚大"
-		case 15 <= m && m < 31:
-			mult = "大"
-		case 63 <= m:
-			mult = ""
-		}
-
-		b.WriteStrings(mult, "吉")
-	}
-
-	return b.String()
-}
-
 func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	h := sha256.New()
 
@@ -202,11 +164,6 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 			divine(&ctx),
 		),
 		tgbotapi.NewInlineQueryResultArticleMarkdown(
-			"sudodivine",
-			"sudo 求签",
-			sudoDevine(&ctx),
-		),
-		tgbotapi.NewInlineQueryResultArticleMarkdown(
 			"pia",
 			"Pia",
 			pia(&ctx),
@@ -249,7 +206,7 @@ func main() {
 
 			ans := answerInline(update.InlineQuery)
 
-			resp, err := bot.AnswerInlineQuery(ans)
+			resp, err := bot.Request(ans)
 
 			if err != nil {
 				log.Println("Error: ", err)
