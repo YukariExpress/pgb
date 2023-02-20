@@ -1,20 +1,55 @@
-BINS = pgb
+.PHONY: all default install uninstall test build release clean package version
 
-DOCKER = docker
+PREFIX := /usr/local
+DESTDIR :=
 
-.PHONY: bins $(BINS) tag_latest version
+VERSION = $(shell if test -f VERSION; then cat VERSION; else git describe | sed 's/-/./g;s/^v//;'; fi)
 
-bins: $(BINS)
+LDFLAGS := -ldflags '-s -w -X main.version=${VERSION}'
+MOD := -mod=vendor
+ARCH := $(shell uname -m)
+OS := $(shell uname -o)
+GOCC := $(shell go version)
+PKGNAME := pgb
+BINNAME := pgb
+PACKAGE := ${PKGNAME}-${VERSION}-${OS}
 
-VERSION := $(shell git describe --tags --always --dirty)
+ifneq (,$(findstring gccgo,$(GOCC)))
+	export GOPATH=$(shell pwd)/.go
+	LDFLAGS := -gccgoflags '-s -w'
+	MOD :=
+endif
 
-$(BINS):
-	$(DOCKER) build --rm -f Dockerfile -t $@:$(VERSION) .
+default: build
+
+all: | clean package
+
+install:
+	install -Dm755 ${BINNAME} $(DESTDIR)$(PREFIX)/bin/${BINNAME}
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/${BINNAME}
+
+test:
+	gofmt -l *.go
+	@test -z "$$(gofmt -l *.go)" || (echo "Files need to be linted" && false)
+	go vet ${MOD}
+	go test -v ${MOD}
+
+build:
+	go build -v ${LDFLAGS} -o ${BINNAME} ${MOD}
+
+release: | test build
+	mkdir ${PACKAGE}
+	cp ./${BINNAME} ${PACKAGE}/
+	cp ./LICENSE ${PACKAGE}/
+	cp ./README.md ${PACKAGE}/
+
+package: release
+	tar -czvf ${PACKAGE}.tar.gz ${PACKAGE}
+clean:
+	rm -rf ${PKGNAME}-*
+	rm -f ${BINNAME}
 
 version:
 	@echo $(VERSION)
-
-tag_latest:
-	for bin in $(BINS); do \
-		$(DOCKER) tag $$bin:$(VERSION) $$bin:latest; \
-	done
