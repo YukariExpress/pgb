@@ -2,6 +2,6 @@
 ## explicit; go 1.18
 github.com/go-telegram/bot
 github.com/go-telegram/bot/models
-# github.com/kelseyhightower/envconfig v1.4.0
-## explicit
-github.com/kelseyhightower/envconfig
+# github.com/sethvargo/go-envconfig v1.1.0
+## explicit; go 1.20
+github.com/sethvargo/go-envconfig

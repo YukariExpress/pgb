@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -17,13 +16,13 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/sethvargo/go-envconfig"
 )
 
 type Config struct {
-	Host  string `default:"0.0.0.0"`
-	Port  string `default:"8080"`
-	Token string `require:"true"`
+	Host  string `env:"HOST, default=0.0.0.0"`
+	Port  string `env:"PORT, default=8080"`
+	Token string `env:"TOKEN, required"`
 }
 
 type UpdateContext struct {
@@ -121,10 +120,12 @@ func divine(ctx *UpdateContext) string {
 func main() {
 	var conf Config
 
-	envconfig.MustProcess("", &conf)
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	if err := envconfig.Process(ctx, &conf); err != nil {
+		log.Fatal(err)
+	}
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(handler),
@@ -176,7 +177,7 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	seeds := make([]uint64, 4)
 
 	if err := binary.Read(r, binary.BigEndian, &seeds); err != nil {
-		fmt.Println("binary.Read failed:", err)
+		log.Println("binary.Read failed:", err)
 	}
 
 	rctx := UpdateContext{
@@ -186,7 +187,7 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 
 	results := []models.InlineQueryResult{
 		&models.InlineQueryResultArticle{ID: "divine", Title: "求签", InputMessageContent: &models.InputTextMessageContent{MessageText: divine(&rctx)}},
-		&models.InlineQueryResultArticle{ID: "2", Title: "Pia", InputMessageContent: &models.InputTextMessageContent{MessageText: pia(&rctx)}},
+		&models.InlineQueryResultArticle{ID: "pia", Title: "Pia", InputMessageContent: &models.InputTextMessageContent{MessageText: pia(&rctx)}},
 	}
 
 	b.AnswerInlineQuery(ctx, &bot.AnswerInlineQueryParams{
