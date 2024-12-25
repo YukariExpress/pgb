@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -9,10 +10,13 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -22,9 +26,9 @@ type Config struct {
 	Token string `require:"true"`
 }
 
-type Context struct {
+type UpdateContext struct {
 	Rand  *rand.Rand
-	Query *tgbotapi.InlineQuery
+	Query *string
 }
 
 type builder struct {
@@ -47,7 +51,7 @@ func newRand(seeds []uint64) *rand.Rand {
 	return rand.New(rand.NewSource(int64(s)))
 }
 
-func pia(ctx *Context) string {
+func pia(ctx *UpdateContext) string {
 	var b builder
 
 	switch ctx.Rand.Uint64() % 8 {
@@ -57,16 +61,16 @@ func pia(ctx *Context) string {
 		b.WriteString("Pia!<(=ｏ ‵-′)ノ☆ ")
 	}
 
-	b.WriteString(ctx.Query.Query)
+	b.WriteString(*ctx.Query)
 
 	return b.String()
 }
 
-func divine(ctx *Context) string {
+func divine(ctx *UpdateContext) string {
 	var omen, mult string
 	var b builder
 
-	b.WriteStrings("所求事项: ", ctx.Query.Query, "\n结果: ")
+	b.WriteStrings("所求事项: ", *ctx.Query, "\n结果: ")
 
 	o := ctx.Rand.Uint64() % 16
 
@@ -114,13 +118,38 @@ func divine(ctx *Context) string {
 	return b.String()
 }
 
-func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
+func main() {
+	var conf Config
+
+	envconfig.MustProcess("", &conf)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	opts := []bot.Option{
+		bot.WithDefaultHandler(handler),
+	}
+
+	if b, err := bot.New(conf.Token, opts...); nil != err {
+		panic(err)
+	} else {
+		go b.StartWebhook(ctx)
+
+		http.ListenAndServe(net.JoinHostPort(conf.Host, conf.Port), b.WebhookHandler())
+	}
+}
+
+func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.InlineQuery == nil {
+		return
+	}
+
 	h := sha256.New()
 
 	if err := binary.Write(
 		h,
 		binary.LittleEndian,
-		uint64(q.From.ID),
+		uint64(update.InlineQuery.From.ID),
 	); err != nil {
 		log.Println(err)
 	}
@@ -136,7 +165,7 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 	if err := binary.Write(
 		h,
 		binary.LittleEndian,
-		[]byte(q.Query),
+		[]byte(update.InlineQuery.Query),
 	); err != nil {
 		log.Println(err)
 	}
@@ -150,73 +179,18 @@ func answerInline(q *tgbotapi.InlineQuery) tgbotapi.InlineConfig {
 		fmt.Println("binary.Read failed:", err)
 	}
 
-	ctx := Context{
+	rctx := UpdateContext{
 		Rand:  newRand(seeds),
-		Query: q,
+		Query: &update.InlineQuery.Query,
 	}
 
-	var res []interface{}
-
-	res = append(res,
-		tgbotapi.NewInlineQueryResultArticleMarkdown(
-			"divine",
-			"求签",
-			divine(&ctx),
-		),
-		tgbotapi.NewInlineQueryResultArticleMarkdown(
-			"pia",
-			"Pia",
-			pia(&ctx),
-		),
-	)
-
-	ans := tgbotapi.InlineConfig{
-		InlineQueryID: q.ID,
-		Results:       res,
-	}
-	return ans
-}
-
-func main() {
-	var conf Config
-
-	envconfig.MustProcess("", &conf)
-
-	bot, err := tgbotapi.NewBotAPI(conf.Token)
-	if err != nil {
-		log.Fatal(err)
+	results := []models.InlineQueryResult{
+		&models.InlineQueryResultArticle{ID: "divine", Title: "求签", InputMessageContent: &models.InputTextMessageContent{MessageText: divine(&rctx)}},
+		&models.InlineQueryResultArticle{ID: "2", Title: "Pia", InputMessageContent: &models.InputTextMessageContent{MessageText: pia(&rctx)}},
 	}
 
-	info, err := bot.GetWebhookInfo()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if info.LastErrorDate != 0 {
-		tm := time.Unix(int64(info.LastErrorDate), 0)
-		log.Printf("Last error: %s %s", tm, info.LastErrorMessage)
-	}
-
-	updates := bot.ListenForWebhook("/")
-
-	go http.ListenAndServe(net.JoinHostPort(conf.Host, conf.Port), nil)
-
-	for update := range updates {
-		if update.InlineQuery != nil {
-
-			ans := answerInline(update.InlineQuery)
-
-			resp, err := bot.Request(ans)
-
-			if err != nil {
-				log.Println("Error: ", err)
-			} else if !resp.Ok {
-				log.Println(
-					"Error: ",
-					resp.ErrorCode,
-					resp.Description,
-				)
-			}
-		}
-	}
+	b.AnswerInlineQuery(ctx, &bot.AnswerInlineQueryParams{
+		InlineQueryID: update.InlineQuery.ID,
+		Results:       results,
+	})
 }
