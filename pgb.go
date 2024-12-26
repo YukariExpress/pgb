@@ -34,12 +34,29 @@ type builder struct {
 	strings.Builder
 }
 
+// WriteStrings writes multiple strings to the builder.
+// It takes a variadic parameter of strings and writes each one
+// sequentially using the WriteString method.
+//
+// Parameters:
+//
+//	strs - a variadic list of strings to be written to the builder.
 func (b *builder) WriteStrings(strs ...string) {
 	for _, s := range strs {
 		b.WriteString(s)
 	}
 }
 
+// newRand creates a new instance of rand.Rand seeded with the XOR combination
+// of the provided seeds. It takes a slice of uint64 seeds, combines them using
+// the XOR operation, and returns a pointer to a new rand.Rand object seeded
+// with the resulting value.
+//
+// Parameters:
+//   - seeds: A slice of uint64 values used to seed the random number generator.
+//
+// Returns:
+//   - A pointer to a new rand.Rand object seeded with the combined seed value.
 func newRand(seeds []uint64) *rand.Rand {
 	var s uint64
 
@@ -50,6 +67,15 @@ func newRand(seeds []uint64) *rand.Rand {
 	return rand.New(rand.NewSource(int64(s)))
 }
 
+// pia generates a string based on the provided UpdateContext.
+// It randomly selects one of two possible pia (slap) actions and appends the query from the context.
+//
+// Parameters:
+//   - ctx: A pointer to an UpdateContext containing the query and random number generator.
+//
+// Returns:
+//
+//	A string that includes a randomly selected pia prefix and the query from the context.
 func pia(ctx *UpdateContext) string {
 	var b builder
 
@@ -65,6 +91,16 @@ func pia(ctx *UpdateContext) string {
 	return b.String()
 }
 
+// divine generates a divination result based on the provided UpdateContext.
+// It constructs a string that includes the query and the result of the divination.
+// The result is determined by generating random numbers and mapping them to specific outcomes.
+// The outcomes are categorized as "吉" (good) or "凶" (bad) with varying degrees of intensity.
+//
+// Parameters:
+// - ctx: A pointer to an UpdateContext which contains the query and a random number generator.
+//
+// Returns:
+// - A string representing the divination result.
 func divine(ctx *UpdateContext) string {
 	var omen, mult string
 	var b builder
@@ -140,6 +176,22 @@ func main() {
 	}
 }
 
+// handler processes an incoming inline query from a bot and generates a response.
+// It uses the query details and current time to create a unique context for the query,
+// then generates a set of inline query results based on this context and sends them back.
+//
+// Parameters:
+// - ctx: The context for the request, used for cancellation and deadlines.
+// - b: The bot instance handling the request.
+// - update: The update containing the inline query to be processed.
+//
+// The function performs the following steps:
+// 1. Checks if the update contains an inline query. If not, it returns immediately.
+// 2. Creates a SHA-256 hash based on the user's ID, current time truncated to 30 minutes, and the query text.
+// 3. Uses the hash to seed a random number generator.
+// 4. Creates an UpdateContext with the random number generator and query text.
+// 5. Generates a set of inline query results using the UpdateContext.
+// 6. Sends the generated results back to the bot as a response to the inline query.
 func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.InlineQuery == nil {
 		return
