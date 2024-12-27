@@ -19,17 +19,34 @@ import (
 	"github.com/sethvargo/go-envconfig"
 )
 
+// Config represents the configuration settings for the application.
+// It includes the following fields:
+//   - Host: The hostname or IP address where the application will run.
+//     It is set via the "HOST" environment variable and defaults to "0.0.0.0".
+//   - Port: The port number on which the application will listen.
+//     It is set via the "PORT" environment variable and defaults to "8080".
+//   - Token: A required authentication token for the application.
+//     It is set via the "TOKEN" environment variable.
 type Config struct {
 	Host  string `env:"HOST, default=0.0.0.0"`
 	Port  string `env:"PORT, default=8080"`
 	Token string `env:"TOKEN, required"`
 }
 
+// UpdateContext holds the context for an update operation.
+// It includes a random number generator and a query string.
+//
+// Fields:
+// - Rand: A pointer to a rand.Rand instance used for generating random numbers.
+// - Query: A pointer to a string representing the query to be executed.
 type UpdateContext struct {
 	Rand  *rand.Rand
 	Query *string
 }
 
+// builder is a custom type that embeds strings.Builder to provide additional
+// functionality or methods specific to the application. It inherits all the
+// methods of strings.Builder and can be used in the same way.
 type builder struct {
 	strings.Builder
 }
