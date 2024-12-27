@@ -1,4 +1,4 @@
-// PGB:Pythia Gata Bot
+// PGB: Pythia Gata Bot
 // Copyright (C) 2019-2024  Yishen Miao
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,13 +27,11 @@ Example usage:
 
 Before running the application, ensure the required environment variables
 are set:
-
 	export HOST=127.0.0.1
 	export PORT=8080
 	export TOKEN=0123456789:abcdefghijklmnopqrstuvwxyz
 
 Then run the application:
-
 	go run pgb.go
 */
 
