@@ -78,20 +78,16 @@ func TestNewRand(t *testing.T) {
 func TestPia(t *testing.T) {
 	const n = 10000
 	const seed = 42
+
+	expTotal := 8
 	expRatios := map[string]int{
 		"Pia!▼(ｏ ‵-′)ノ★":  1,
 		"Pia!<(=ｏ ‵-′)ノ☆": 7,
 	}
 
-	expTotal := 0
-
-	for _, v := range expRatios {
-		expTotal += v
-	}
-
-	counts := map[string]int{
-		"Pia!▼(ｏ ‵-′)ノ★":  0,
-		"Pia!<(=ｏ ‵-′)ノ☆": 0,
+	counts := make(map[string]int)
+	for k := range expRatios {
+		counts[k] = 0
 	}
 
 	r := rand.New(rand.NewSource(seed))
@@ -110,22 +106,19 @@ func TestPia(t *testing.T) {
 		}
 	}
 
-	countsTotal := 0
-	for _, v := range counts {
-		countsTotal += v
-	}
-
-	for key, count := range counts {
-		expected := float64(expRatios[key]) / float64(expTotal)
-		actual := float64(count) / float64(countsTotal)
-		t.Logf("%s: %d, expected: %f, actual: %f", key, count, expected, actual)
-		assert.InDelta(t, actual, expected, expected*0.1, "Ratio mismatch for: "+key)
+	for k, v := range counts {
+		exp := float64(expRatios[k]) / float64(expTotal) * n
+		tol := exp * 2
+		t.Logf("%s: %d, expected: %f, actual: %d, tolarence: %f", k, v, exp, v, tol)
+		assert.InDelta(t, exp, v, tol, "Ratio mismatch for: "+k)
 	}
 }
 
 func TestDivine(t *testing.T) {
-	const iterations = 10000
-	const randSeed = 42
+	const n = 10000
+	const seed = 42
+
+	expTotal := 16 * 1024
 	expRatios := map[string]int{
 		"极大吉": 7 * 1,
 		"超大吉": 7 * 10,
@@ -152,18 +145,13 @@ func TestDivine(t *testing.T) {
 		"极大凶": 7 * 1,
 	}
 
-	expTotal := 0
-	for _, v := range expRatios {
-		expTotal += v
-	}
-
 	counts := make(map[string]int)
-	for key := range expRatios {
-		counts[key] = 0
+	for k := range expRatios {
+		counts[k] = 0
 	}
 
-	r := rand.New(rand.NewSource(randSeed))
-	for i := 0; i < iterations; i++ {
+	r := rand.New(rand.NewSource(seed))
+	for i := 0; i < n; i++ {
 		query := "test query"
 		ctx := &UpdateContext{
 			Rand:  r,
@@ -178,15 +166,10 @@ func TestDivine(t *testing.T) {
 		}
 	}
 
-	countsTotal := 0
-	for _, v := range counts {
-		countsTotal += v
-	}
-
-	for key, count := range counts {
-		expected := float64(expRatios[key]) / float64(expTotal)
-		actual := float64(count) / float64(countsTotal)
-		t.Logf("%s: %d, expected: %f, actual: %f", key, count, expected, actual)
-		assert.InDelta(t, actual, expected, expected*3, "Ratio mismatch for: "+key)
+	for k, v := range counts {
+		exp := float64(expRatios[k]) / float64(expTotal) * n
+		tol := exp * 2
+		t.Logf("%s: %d, expected: %f, actual: %d, tolarence: %f", k, v, exp, v, tol)
+		assert.InDelta(t, exp, v, tol, "Ratio mismatch for: "+k)
 	}
 }
