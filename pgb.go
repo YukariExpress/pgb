@@ -50,14 +50,16 @@ type Config struct {
 }
 
 // UpdateContext holds the context for an update operation.
-// It includes a random number generator and a query string.
+// It includes a random number generator, a query string, and a locale.
 //
 // Fields:
 // - Rand: A pointer to a rand.Rand instance used for generating random numbers.
 // - Query: A pointer to a string representing the query to be executed.
+// - Locale: A string representing the locale of the user.
 type UpdateContext struct {
-	Rand  *rand.Rand
-	Query *string
+	Rand   *rand.Rand
+	Query  *string
+	Locale *string
 }
 
 // builder is a custom type that embeds strings.Builder to provide additional
@@ -209,23 +211,29 @@ func main() {
 	}
 }
 
-// handler processes an incoming inline query from a bot and generates a response.
-// It uses the query details and current time to create a unique context for the query,
-// then generates a set of inline query results based on this context and sends them back.
+// handler processes an incoming inline query from a bot and generates a
+// response.  It uses the query details and current time to create a unique
+// context for the query, then generates a set of inline query results based on
+// this context and sends them back.
 //
 // Parameters:
-// - ctx: The context for the request, used for cancellation and deadlines.
-// - b: The bot instance handling the request.
-// - update: The update containing the inline query to be processed.
+//   - ctx: The context for the request, used for cancellation and deadlines.
+//   - b: The bot instance handling the request.
+//   - update: The update containing the inline query to be processed.
 //
 // The function performs the following steps:
-// 1. Checks if the update contains an inline query. If not, it returns immediately.
-// 2. Creates a SHA-256 hash based on the user's ID, current time truncated to 30 minutes, and the query text.
-// 3. Uses the hash to seed a random number generator.
-// 4. Creates an UpdateContext with the random number generator and query text.
-// 5. Generates a set of inline query results using the UpdateContext.
-// 6. Sends the generated results back to the bot as a response to the inline query.
+//  1. Checks if the update contains an inline query. If not, it returns
+//     immediately.
+//  2. Creates a SHA-256 hash based on the user's ID, current time truncated to
+//     30 minutes, and the query text.
+//  3. Uses the hash to seed a random number generator.
+//  4. Creates an UpdateContext with the random number generator and query text.
+//  5. Generates a set of inline query results using the UpdateContext.
+//  6. Sends the generated results back to the bot as a response to the inline
+//     query.
 func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	locale := update.InlineQuery.From.LanguageCode
+
 	if update.InlineQuery == nil {
 		return
 	}
@@ -266,13 +274,37 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	}
 
 	rctx := UpdateContext{
-		Rand:  newRand(seeds),
-		Query: &update.InlineQuery.Query,
+		Rand:   newRand(seeds),
+		Query:  &update.InlineQuery.Query,
+		Locale: &locale,
+	}
+
+	var divineTitle, piaTitle string
+
+	switch locale {
+	case "zh":
+		divineTitle = "求签"
+		piaTitle = "Pia"
+	default:
+		divineTitle = "Divination"
+		piaTitle = "Pia"
 	}
 
 	results := []models.InlineQueryResult{
-		&models.InlineQueryResultArticle{ID: "divine", Title: "求签", InputMessageContent: &models.InputTextMessageContent{MessageText: divine(&rctx)}},
-		&models.InlineQueryResultArticle{ID: "pia", Title: "Pia", InputMessageContent: &models.InputTextMessageContent{MessageText: pia(&rctx)}},
+		&models.InlineQueryResultArticle{
+			ID:    "divine",
+			Title: divineTitle,
+			InputMessageContent: &models.InputTextMessageContent{
+				MessageText: divine(&rctx),
+			},
+		},
+		&models.InlineQueryResultArticle{
+			ID:    "pia",
+			Title: piaTitle,
+			InputMessageContent: &models.InputTextMessageContent{
+				MessageText: pia(&rctx),
+			},
+		},
 	}
 
 	b.AnswerInlineQuery(ctx, &bot.AnswerInlineQueryParams{
