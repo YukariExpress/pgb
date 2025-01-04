@@ -37,12 +37,12 @@ import (
 
 // Config represents the configuration settings for the application.
 // It includes the following fields:
-//   - Host: The hostname or IP address where the application will run.
-//     It is set via the "HOST" environment variable and defaults to "0.0.0.0".
-//   - Port: The port number on which the application will listen.
-//     It is set via the "PORT" environment variable and defaults to "8080".
-//   - Token: A required authentication token for the application.
-//     It is set via the "TOKEN" environment variable.
+//   - Host: The hostname or IP address where the application will run. It is
+//     set via the "HOST" environment variable and defaults to "0.0.0.0".
+//   - Port: The port number on which the application will listen. It is set via
+//     the "PORT" environment variable and defaults to "8080".
+//   - Token: A required authentication token for the application. It is set via
+//     the "TOKEN" environment variable.
 type Config struct {
 	Host  string `env:"HOST, default=0.0.0.0"`
 	Port  string `env:"PORT, default=8080"`
@@ -70,8 +70,8 @@ type builder struct {
 }
 
 // WriteStrings writes multiple strings to the builder.
-// It takes a variadic parameter of strings and writes each one
-// sequentially using the WriteString method.
+// It takes a variadic parameter of strings and writes each one sequentially
+// using the WriteString method.
 //
 // Parameters:
 //
@@ -103,14 +103,17 @@ func newRand(seeds []uint64) *rand.Rand {
 }
 
 // pia generates a string based on the provided UpdateContext.
-// It randomly selects one of two possible pia (slap) actions and appends the query from the context.
+// It randomly selects one of two possible pia (slap) actions performed by
+// either a dog or a cat and appends the query from the context.
+// There is a 1 in 8 chance to summon a dog and a 7 in 8 chance to summon a cat.
 //
 // Parameters:
-//   - ctx: A pointer to an UpdateContext containing the query and random number generator.
+//   - ctx: A pointer to an UpdateContext containing the query and random number
+//     generator.
 //
 // Returns:
-//
-//	A string that includes a randomly selected pia prefix and the query from the context.
+//   - A string that includes a randomly selected pia prefix and the query from
+//     the context.
 func pia(ctx *UpdateContext) string {
 	var b builder
 
@@ -126,16 +129,18 @@ func pia(ctx *UpdateContext) string {
 	return b.String()
 }
 
-// divine generates a divination result based on the provided UpdateContext.
-// It constructs a string that includes the query and the result of the divination.
-// The result is determined by generating random numbers and mapping them to specific outcomes.
-// The outcomes are categorized as "吉" (good) or "凶" (bad) with varying degrees of intensity.
+// divine generates a divination result based on the provided UpdateContext. It
+// constructs a string that includes the query and the result of the divination.
+// The result is determined by generating random numbers and mapping them to
+// specific outcomes. The outcomes are categorized as "吉" (good) or "凶" (bad)
+// with varying degrees of intensity.
 //
 // Parameters:
-// - ctx: A pointer to an UpdateContext which contains the query and a random number generator.
+//   - ctx: A pointer to an UpdateContext which contains the query and a random
+//     number generator.
 //
 // Returns:
-// - A string representing the divination result.
+//   - A string representing the divination result.
 func divine(ctx *UpdateContext) string {
 	var omen, mult string
 	var b builder
@@ -207,7 +212,10 @@ func main() {
 	} else {
 		go b.StartWebhook(ctx)
 
-		http.ListenAndServe(net.JoinHostPort(conf.Host, conf.Port), b.WebhookHandler())
+		http.ListenAndServe(
+			net.JoinHostPort(conf.Host, conf.Port),
+			b.WebhookHandler(),
+		)
 	}
 }
 
@@ -307,8 +315,11 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 		},
 	}
 
-	b.AnswerInlineQuery(ctx, &bot.AnswerInlineQueryParams{
-		InlineQueryID: update.InlineQuery.ID,
-		Results:       results,
-	})
+	b.AnswerInlineQuery(
+		ctx,
+		&bot.AnswerInlineQueryParams{
+			InlineQueryID: update.InlineQuery.ID,
+			Results:       results,
+		},
+	)
 }

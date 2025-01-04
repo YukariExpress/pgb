@@ -15,8 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /*
-Pgb is a telegram bot that generates random inline query results based on the user's query text and current time.
-It only handles HTTP requests and should be run behind a reverse proxy that handes HTTPS termination.
+Pgb is a telegram bot that generates random inline query results based on the
+user's query text and current time.  It only handles HTTP requests and should be
+run behind a reverse proxy that handes HTTPS termination.
 
 This program expects the following environment variables:
 	- HOST: The hostname or IP address where pgb binds to (default: "0.0.0.0").
@@ -25,8 +26,8 @@ This program expects the following environment variables:
 
 Example usage:
 
-Before running the application, ensure the required environment variables
-are set:
+Before running the application, ensure the required environment variables are
+set:
 	export HOST=127.0.0.1
 	export PORT=8080
 	export TOKEN=0123456789:abcdefghijklmnopqrstuvwxyz
