@@ -240,10 +240,13 @@ func main() {
 //  6. Sends the generated results back to the bot as a response to the inline
 //     query.
 func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	locale := update.InlineQuery.From.LanguageCode
-
 	if update.InlineQuery == nil {
 		return
+	}
+
+	locale := "zh"
+	if update.InlineQuery.From != nil && update.InlineQuery.From.LanguageCode != "" {
+		locale = update.InlineQuery.From.LanguageCode
 	}
 
 	h := sha256.New()
