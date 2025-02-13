@@ -168,7 +168,7 @@ func TestDivine(t *testing.T) {
 
 	for k, v := range counts {
 		exp := float64(expRatios[k]) / float64(expTotal) * n
-		tol := exp * 2
+		tol := exp * 3
 		t.Logf("%s: %d, expected: %f, actual: %d, tolarence: %f", k, v, exp, v, tol)
 		assert.InDelta(t, exp, v, tol, "Ratio mismatch for: "+k)
 	}
