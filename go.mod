@@ -1,10 +1,10 @@
 module github.com/YukariExpress/pgb
 
-go 1.23
+go 1.24
 
 require (
 	github.com/go-telegram/bot v1.14.0
-	github.com/sethvargo/go-envconfig v1.1.0
+	github.com/sethvargo/go-envconfig v1.1.1
 	github.com/stretchr/testify v1.10.0
 )
 
