@@ -813,17 +813,18 @@ type GetCustomEmojiStickersParams struct {
 }
 
 type UploadStickerFileParams struct {
-	UserID     int64            `json:"user_id"`
-	PngSticker models.InputFile `json:"png_sticker"`
+	UserID        int64            `json:"user_id"`
+	Sticker       models.InputFile `json:"sticker"`
+	StickerFormat string           `json:"sticker_format"`
 }
 
 type CreateNewStickerSetParams struct {
-	UserID          int64            `json:"user_id"`
-	Name            string           `json:"name"`
-	Title           string           `json:"title"`
-	Stickers        []models.Sticker `json:"stickers"`
-	StickerType     string           `json:"sticker_type,omitempty"`
-	NeedsRepainting bool             `json:"needs_repainting,omitempty"`
+	UserID          int64                 `json:"user_id"`
+	Name            string                `json:"name"`
+	Title           string                `json:"title"`
+	Stickers        []models.InputSticker `json:"stickers"`
+	StickerType     string                `json:"sticker_type,omitempty"`
+	NeedsRepainting bool                  `json:"needs_repainting,omitempty"`
 }
 
 type AddStickerToSetParams struct {
