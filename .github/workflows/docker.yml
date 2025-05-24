@@ -59,7 +59,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: false
+          push: true
           tags: |
             ghcr.io/${{ steps.prep.outputs.repo_lc }}:latest
             ghcr.io/${{ steps.prep.outputs.repo_lc }}:${{ github.sha }}
