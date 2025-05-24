@@ -37,7 +37,7 @@ test:
 	go test -v ${MOD}
 
 build:
-	go build -v ${LDFLAGS} -o ${BINNAME} ${MOD}
+	CGO_ENABLED=0 go build -v ${LDFLAGS} -o ${BINNAME} ${MOD}
 
 release: | test build
 	mkdir ${PACKAGE}
