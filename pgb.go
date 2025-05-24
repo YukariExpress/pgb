@@ -35,8 +35,9 @@ import (
 	"github.com/sethvargo/go-envconfig"
 )
 
-// Config represents the configuration settings for the application.
-// It includes the following fields:
+// Config represents the configuration settings for the application. It includes
+// the following fields:
+//
 //   - Host: The hostname or IP address where the application will run. It is
 //     set via the "HOST" environment variable and defaults to "0.0.0.0".
 //   - Port: The port number on which the application will listen. It is set via
@@ -49,8 +50,8 @@ type Config struct {
 	Token string `env:"TOKEN, required"`
 }
 
-// UpdateContext holds the context for an update operation.
-// It includes a random number generator, a query string, and a locale.
+// UpdateContext holds the context for an update operation. It includes a random
+// number generator, a query string, and a locale.
 //
 // Fields:
 // - Rand: A pointer to a rand.Rand instance used for generating random numbers.
@@ -69,9 +70,9 @@ type builder struct {
 	strings.Builder
 }
 
-// WriteStrings writes multiple strings to the builder.
-// It takes a variadic parameter of strings and writes each one sequentially
-// using the WriteString method.
+// WriteStrings writes multiple strings to the builder. It takes a variadic
+// parameter of strings and writes each one sequentially using the WriteString
+// method.
 //
 // Parameters:
 //
@@ -102,10 +103,10 @@ func newRand(seeds []uint64) *rand.Rand {
 	return rand.New(rand.NewSource(int64(s)))
 }
 
-// pia generates a string based on the provided UpdateContext.
-// It randomly selects one of two possible pia (slap) actions performed by
-// either a dog or a cat and appends the query from the context.
-// There is a 1 in 8 chance to summon a dog and a 7 in 8 chance to summon a cat.
+// pia generates a string based on the provided UpdateContext.  It randomly
+// selects one of two possible pia (slap) actions performed by either a dog or a
+// cat and appends the query from the context. There is a 1 in 8 chance to
+// summon a dog and a 7 in 8 chance to summon a cat.
 //
 // Parameters:
 //   - ctx: A pointer to an UpdateContext containing the query and random number
@@ -219,6 +220,116 @@ func main() {
 	}
 }
 
+// getLocaleTitles returns the localized titles for the divine and pia results
+// based on the locale string.
+//
+// Parameters:
+//   - locale: the user's language code (e.g., "zh", "en").
+//
+// Returns:
+//   - divineTitle: the localized title for the divination result.
+//   - piaTitle: the localized title for the pia result.
+func getLocaleTitles(locale string) (string, string) {
+	switch locale {
+	case "zh":
+		return "求签", "Pia"
+	default:
+		return "Divination", "Pia"
+	}
+}
+
+// getUserID extracts the user ID as uint64 from a models.User pointer. Returns
+// 0 if the user is nil.
+//
+// Parameters:
+//   - user: pointer to a models.User struct.
+//
+// Returns:
+//   - userID: the user's ID as uint64, or 0 if user is nil.
+func getUserID(user *models.User) uint64 {
+	if user != nil {
+		return uint64(user.ID)
+	}
+	return 0
+}
+
+// getUserLocale extracts the language code from a models.User pointer. Returns
+// "zh" if the user is nil or the language code is empty.
+//
+// Parameters:
+//   - user: pointer to a models.User struct.
+//
+// Returns:
+//   - locale: the user's language code, or "zh" as default.
+func getUserLocale(user *models.User) string {
+	if user != nil && user.LanguageCode != "" {
+		return user.LanguageCode
+	}
+	return "zh"
+}
+
+// buildUpdateContext creates an UpdateContext for a given user ID, query, and
+// locale. It generates a deterministic random number generator seeded by the
+// user ID, time, and query.
+//
+// Parameters:
+//   - userID: the user's ID as uint64.
+//   - queryText: the query string.
+//   - locale: the user's locale string.
+//
+// Returns:
+//   - pointer to an UpdateContext struct.
+func buildUpdateContext(userID uint64, queryText, locale string) *UpdateContext {
+	h := sha256.New()
+	_ = binary.Write(h, binary.LittleEndian, userID)
+	_ = binary.Write(h, binary.LittleEndian, time.Now().Truncate(30*time.Minute).Unix())
+	_ = binary.Write(h, binary.LittleEndian, []byte(queryText))
+	r := bytes.NewReader(h.Sum(nil))
+	seeds := make([]uint64, 4)
+	_ = binary.Read(r, binary.BigEndian, &seeds)
+	return &UpdateContext{
+		Rand:   newRand(seeds),
+		Query:  &queryText,
+		Locale: &locale,
+	}
+}
+
+// buildInlineQueryResults generates the inline query results for a given user
+// and query text. It determines the locale and user ID, builds the
+// UpdateContext, and returns the results.
+//
+// Parameters:
+//   - user: pointer to a models.User struct (may be nil).
+//   - queryText: the query string.
+//
+// Returns:
+//   - slice of models.InlineQueryResult containing the divine and pia articles.
+func buildInlineQueryResults(user *models.User, queryText string) []models.InlineQueryResult {
+	locale := getUserLocale(user)
+	userID := getUserID(user)
+
+	rctx := buildUpdateContext(userID, queryText, locale)
+	divineTitle, piaTitle := getLocaleTitles(locale)
+
+	results := []models.InlineQueryResult{
+		&models.InlineQueryResultArticle{
+			ID:    "divine",
+			Title: divineTitle,
+			InputMessageContent: &models.InputTextMessageContent{
+				MessageText: divine(rctx),
+			},
+		},
+		&models.InlineQueryResultArticle{
+			ID:    "pia",
+			Title: piaTitle,
+			InputMessageContent: &models.InputTextMessageContent{
+				MessageText: pia(rctx),
+			},
+		},
+	}
+	return results
+}
+
 // handler processes an incoming inline query from a bot and generates a
 // response.  It uses the query details and current time to create a unique
 // context for the query, then generates a set of inline query results based on
@@ -243,81 +354,9 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.InlineQuery == nil {
 		return
 	}
-
-	locale := "zh"
-	if update.InlineQuery.From != nil && update.InlineQuery.From.LanguageCode != "" {
-		locale = update.InlineQuery.From.LanguageCode
-	}
-
-	h := sha256.New()
-
-	if err := binary.Write(
-		h,
-		binary.LittleEndian,
-		uint64(update.InlineQuery.From.ID),
-	); err != nil {
-		log.Println(err)
-	}
-
-	if err := binary.Write(
-		h,
-		binary.LittleEndian,
-		time.Now().Truncate(30*time.Minute).Unix(),
-	); err != nil {
-		log.Println(err)
-	}
-
-	if err := binary.Write(
-		h,
-		binary.LittleEndian,
-		[]byte(update.InlineQuery.Query),
-	); err != nil {
-		log.Println(err)
-	}
-
-	r := bytes.NewReader(h.Sum(nil))
-
-	// sha256 checksum is 256 bits long, equals to four 64bits integer.
-	seeds := make([]uint64, 4)
-
-	if err := binary.Read(r, binary.BigEndian, &seeds); err != nil {
-		log.Println("binary.Read failed:", err)
-	}
-
-	rctx := UpdateContext{
-		Rand:   newRand(seeds),
-		Query:  &update.InlineQuery.Query,
-		Locale: &locale,
-	}
-
-	var divineTitle, piaTitle string
-
-	switch locale {
-	case "zh":
-		divineTitle = "求签"
-		piaTitle = "Pia"
-	default:
-		divineTitle = "Divination"
-		piaTitle = "Pia"
-	}
-
-	results := []models.InlineQueryResult{
-		&models.InlineQueryResultArticle{
-			ID:    "divine",
-			Title: divineTitle,
-			InputMessageContent: &models.InputTextMessageContent{
-				MessageText: divine(&rctx),
-			},
-		},
-		&models.InlineQueryResultArticle{
-			ID:    "pia",
-			Title: piaTitle,
-			InputMessageContent: &models.InputTextMessageContent{
-				MessageText: pia(&rctx),
-			},
-		},
-	}
-
+	user := update.InlineQuery.From
+	queryText := update.InlineQuery.Query
+	results := buildInlineQueryResults(user, queryText)
 	b.AnswerInlineQuery(
 		ctx,
 		&bot.AnswerInlineQueryParams{
