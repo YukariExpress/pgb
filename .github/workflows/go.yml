@@ -4,6 +4,9 @@ on:
   - push
   - pull_request
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
         check-latest: true
 
     - name: Build
-      run: make
+      run: CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o pgb ./pgb.go
 
     - name: Test
-      run: make test
+      run: go test -v ./...
