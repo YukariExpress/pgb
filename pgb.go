@@ -45,9 +45,11 @@ import (
 //   - Token: A required authentication token for the application. It is set via
 //     the "TOKEN" environment variable.
 type Config struct {
-	Host  string `env:"HOST, default=0.0.0.0"`
-	Port  string `env:"PORT, default=8080"`
-	Token string `env:"TOKEN, required"`
+	Debug   bool          `env:"DEBUG, default=false"`
+	Host    string        `env:"HOST, default=0.0.0.0"`
+	Port    string        `env:"PORT, default=8080"`
+	Timeout time.Duration `env:"TIMEOUT, default=5s"`
+	Token   string        `env:"TOKEN, required"`
 }
 
 // UpdateContext holds the context for an update operation. It includes a random
@@ -206,6 +208,11 @@ func main() {
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(handler),
+		bot.WithCheckInitTimeout(conf.Timeout),
+	}
+
+	if conf.Debug {
+		opts = append(opts, bot.WithDebug())
 	}
 
 	if b, err := bot.New(conf.Token, opts...); nil != err {
