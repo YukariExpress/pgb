@@ -9,7 +9,7 @@ permissions:
 jobs:
   wait-for-checks:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'mys721tx/cdh'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - name: Wait for Go CI to complete
         uses: lewagon/wait-on-check-action@v1.4.0
@@ -21,7 +21,6 @@ jobs:
 
   dependabot:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'mys721tx/cdh'
     needs: wait-for-checks
     steps:
       - name: Checkout code
