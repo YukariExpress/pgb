@@ -167,3 +167,171 @@ func TestGetUserLocale(t *testing.T) {
 	assert.Equal(t, "zh", getUserLocale(user))
 	assert.Equal(t, "zh", getUserLocale(nil))
 }
+
+func TestGetPiaPrefix(t *testing.T) {
+	tests := []struct {
+		name      string
+		randValue uint64
+		expected  string
+	}{
+		{
+			name:      "dog prefix (case 0)",
+			randValue: 0,
+			expected:  "Pia!▼(ｏ ‵-′)ノ★ ",
+		},
+		{
+			name:      "dog prefix (case 8)",
+			randValue: 8,
+			expected:  "Pia!▼(ｏ ‵-′)ノ★ ",
+		},
+		{
+			name:      "cat prefix (case 1)",
+			randValue: 1,
+			expected:  "Pia!<(=ｏ ‵-′)ノ☆ ",
+		},
+		{
+			name:      "cat prefix (case 7)",
+			randValue: 7,
+			expected:  "Pia!<(=ｏ ‵-′)ノ☆ ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getPiaPrefix(tt.randValue)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetOmen(t *testing.T) {
+	tests := []struct {
+		name      string
+		randValue uint64
+		expected  string
+	}{
+		{
+			name:      "bad (value 0)",
+			randValue: 0,
+			expected:  "凶",
+		},
+		{
+			name:      "bad (value 6)",
+			randValue: 6,
+			expected:  "凶",
+		},
+		{
+			name:      "neutral (value 7)",
+			randValue: 7,
+			expected:  "",
+		},
+		{
+			name:      "neutral (value 8)",
+			randValue: 8,
+			expected:  "",
+		},
+		{
+			name:      "good (value 9)",
+			randValue: 9,
+			expected:  "吉",
+		},
+		{
+			name:      "good (value 15)",
+			randValue: 15,
+			expected:  "吉",
+		},
+		{
+			name:      "wraps around to bad (value 16)",
+			randValue: 16,
+			expected:  "凶",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getOmen(tt.randValue)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetMultiplier(t *testing.T) {
+	tests := []struct {
+		name      string
+		randValue uint64
+		expected  string
+	}{
+		{
+			name:      "extremely small (value 0)",
+			randValue: 0,
+			expected:  "极小",
+		},
+		{
+			name:      "super small (value 1)",
+			randValue: 1,
+			expected:  "超小",
+		},
+		{
+			name:      "super small (value 10)",
+			randValue: 10,
+			expected:  "超小",
+		},
+		{
+			name:      "ultra small (value 11)",
+			randValue: 11,
+			expected:  "特小",
+		},
+		{
+			name:      "very small (value 56)",
+			randValue: 56,
+			expected:  "甚小",
+		},
+		{
+			name:      "small (value 176)",
+			randValue: 176,
+			expected:  "小",
+		},
+		{
+			name:      "neutral (value 386)",
+			randValue: 386,
+			expected:  "",
+		},
+		{
+			name:      "large (value 638)",
+			randValue: 638,
+			expected:  "大",
+		},
+		{
+			name:      "very large (value 848)",
+			randValue: 848,
+			expected:  "甚大",
+		},
+		{
+			name:      "ultra large (value 968)",
+			randValue: 968,
+			expected:  "特大",
+		},
+		{
+			name:      "super large (value 1013)",
+			randValue: 1013,
+			expected:  "超大",
+		},
+		{
+			name:      "extremely large (value 1023)",
+			randValue: 1023,
+			expected:  "极大",
+		},
+		{
+			name:      "wraps around to extremely small (value 1024)",
+			randValue: 1024,
+			expected:  "极小",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getMultiplier(tt.randValue)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

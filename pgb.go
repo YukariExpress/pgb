@@ -105,6 +105,23 @@ func newRand(seeds []uint64) *rand.Rand {
 	return rand.New(rand.NewSource(int64(s)))
 }
 
+// getPiaPrefix returns the pia prefix based on a random value. There is a 1 in 8
+// chance to summon a dog and a 7 in 8 chance to summon a cat.
+//
+// Parameters:
+//   - r: A random uint64 value used to determine the prefix.
+//
+// Returns:
+//   - A string containing the selected pia prefix.
+func getPiaPrefix(r uint64) string {
+	switch r % 8 {
+	case 0:
+		return "Pia!▼(ｏ ‵-′)ノ★ "
+	default:
+		return "Pia!<(=ｏ ‵-′)ノ☆ "
+	}
+}
+
 // pia generates a string based on the provided UpdateContext.  It randomly
 // selects one of two possible pia (slap) actions performed by either a dog or a
 // cat and appends the query from the context. There is a 1 in 8 chance to
@@ -120,16 +137,81 @@ func newRand(seeds []uint64) *rand.Rand {
 func pia(ctx *UpdateContext) string {
 	var b builder
 
-	switch ctx.Rand.Uint64() % 8 {
-	case 0:
-		b.WriteString("Pia!▼(ｏ ‵-′)ノ★ ")
-	default:
-		b.WriteString("Pia!<(=ｏ ‵-′)ノ☆ ")
-	}
-
+	b.WriteString(getPiaPrefix(ctx.Rand.Uint64()))
 	b.WriteString(*ctx.Query)
 
 	return b.String()
+}
+
+// getOmen determines the omen ("吉", "凶", or empty string for "尚可") based on
+// a random value. The probabilities are distributed as follows:
+//   - 凶 (bad): 0-6 (7/16 chance = 43.75%)
+//   - "" (neutral/尚可): 7-8 (2/16 chance = 12.5%)
+//   - 吉 (good): 9-15 (7/16 chance = 43.75%)
+//
+// Parameters:
+//   - r: A random uint64 value used to determine the omen.
+//
+// Returns:
+//   - A string containing the omen ("吉", "凶", or empty string).
+func getOmen(r uint64) string {
+	o := r % 16
+	switch {
+	case 9 <= o:
+		return "吉"
+	case o < 7:
+		return "凶"
+	default:
+		return ""
+	}
+}
+
+// getMultiplier determines the multiplier string based on a random value.
+// The multiplier represents the intensity of the divination result following
+// a hierarchy from extremely small to extremely large:
+//   - 极小 (extremely small): 0-0 (1/1024 chance)
+//   - 超小 (super small): 1-10 (10/1024 chance)
+//   - 特小 (ultra small): 11-55 (45/1024 chance)
+//   - 甚小 (very small): 56-175 (120/1024 chance)
+//   - 小 (small): 176-385 (210/1024 chance)
+//   - "" (neutral): 386-637 (252/1024 chance)
+//   - 大 (large): 638-847 (210/1024 chance)
+//   - 甚大 (very large): 848-967 (120/1024 chance)
+//   - 特大 (ultra large): 968-1012 (45/1024 chance)
+//   - 超大 (super large): 1013-1022 (10/1024 chance)
+//   - 极大 (extremely large): 1023+ (1/1024 chance)
+//
+// Parameters:
+//   - r: A random uint64 value used to determine the multiplier.
+//
+// Returns:
+//   - A string containing the multiplier ("极小", "超小", etc., or empty string).
+func getMultiplier(r uint64) string {
+	m := r % 1024
+	switch {
+	case m < 1:
+		return "极小"
+	case 1 <= m && m < 11:
+		return "超小"
+	case 11 <= m && m < 56:
+		return "特小"
+	case 56 <= m && m < 176:
+		return "甚小"
+	case 176 <= m && m < 386:
+		return "小"
+	case 386 <= m && m < 638:
+		return ""
+	case 638 <= m && m < 848:
+		return "大"
+	case 848 <= m && m < 968:
+		return "甚大"
+	case 968 <= m && m < 1013:
+		return "特大"
+	case 1013 <= m && m < 1023:
+		return "超大"
+	default: // m >= 1023
+		return "极大"
+	}
 }
 
 // divine generates a divination result based on the provided UpdateContext. It
@@ -145,51 +227,16 @@ func pia(ctx *UpdateContext) string {
 // Returns:
 //   - A string representing the divination result.
 func divine(ctx *UpdateContext) string {
-	var omen, mult string
 	var b builder
 
 	b.WriteStrings("所求事项: ", *ctx.Query, "\n结果: ")
 
-	o := ctx.Rand.Uint64() % 16
-
-	switch {
-	case 9 <= o:
-		omen = "吉"
-	case o < 7:
-		omen = "凶"
-	}
+	omen := getOmen(ctx.Rand.Uint64())
 
 	if omen == "" {
 		b.WriteString("尚可")
 	} else {
-
-		m := ctx.Rand.Uint64() % 1024
-
-		switch {
-		case m < 1:
-			mult = "极小"
-		case 1 <= m && m < 11:
-			mult = "超小"
-		case 11 <= m && m < 56:
-			mult = "特小"
-		case 56 <= m && m < 176:
-			mult = "甚小"
-		case 176 <= m && m < 386:
-			mult = "小"
-		case 386 <= m && m < 638:
-			mult = ""
-		case 638 <= m && m < 848:
-			mult = "大"
-		case 848 <= m && m < 968:
-			mult = "甚大"
-		case 968 <= m && m < 1013:
-			mult = "特大"
-		case 1013 <= m && m < 1023:
-			mult = "超大"
-		case 1023 <= m:
-			mult = "极大"
-		}
-
+		mult := getMultiplier(ctx.Rand.Uint64())
 		b.WriteStrings(mult, omen)
 	}
 
