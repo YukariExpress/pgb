@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/go-telegram/bot v1.17.0
 	github.com/sethvargo/go-envconfig v1.3.0
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
