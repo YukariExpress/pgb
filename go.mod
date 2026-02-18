@@ -3,7 +3,7 @@ module github.com/YukariExpress/pgb
 go 1.25
 
 require (
-	github.com/go-telegram/bot v1.18.0
+	github.com/go-telegram/bot v1.19.0
 	github.com/sethvargo/go-envconfig v1.3.0
 	github.com/stretchr/testify v1.11.1
 )
