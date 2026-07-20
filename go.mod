@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/go-telegram/bot v1.22.0
-	github.com/sethvargo/go-envconfig v1.3.1
+	github.com/sethvargo/go-envconfig v1.4.3
 	github.com/stretchr/testify v1.11.1
 )
 
